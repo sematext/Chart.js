@@ -3,10 +3,12 @@
 'use strict';
 
 var color = require('chartjs-color');
+var elementResizeDetectorMaker = require('element-resize-detector');
 
 module.exports = function(Chart) {
 	// Global Chart helpers object for utility methods and classes
 	var helpers = Chart.helpers = {};
+	var erd = null;
 
 	// -- Basic js utility methods
 	helpers.each = function(loopable, callback, self, reverse) {
@@ -945,34 +947,10 @@ module.exports = function(Chart) {
 		return color(c);
 	};
 	helpers.addResizeListener = function(node, callback) {
-		var iframe = document.createElement('iframe');
-		iframe.className = 'chartjs-hidden-iframe';
-		iframe.style.cssText =
-			'display:block;'+
-			'overflow:hidden;'+
-			'border:0;'+
-			'margin:0;'+
-			'top:0;'+
-			'left:0;'+
-			'bottom:0;'+
-			'right:0;'+
-			'height:100%;'+
-			'width:100%;'+
-			'position:absolute;'+
-			'pointer-events:none;'+
-			'z-index:-1;';
-
-		// Prevent the iframe to gain focus on tab.
-		// https://github.com/chartjs/Chart.js/issues/3090
-		iframe.tabIndex = -1;
-
-		// Let's keep track of this added iframe and thus avoid DOM query when removing it.
+		// Throttle the callback notification until the next animation frame.
 		var stub = node._chartjs = {
-			resizer: iframe,
 			ticking: false
 		};
-
-		// Throttle the callback notification until the next animation frame.
 		var notify = function() {
 			if (!stub.ticking) {
 				stub.ticking = true;
@@ -985,30 +963,23 @@ module.exports = function(Chart) {
 			}
 		};
 
-		// If the iframe is re-attached to the DOM, the resize listener is removed because the
-		// content is reloaded, so make sure to install the handler after the iframe is loaded.
-		// https://github.com/chartjs/Chart.js/issues/3521
-		helpers.addEvent(iframe, 'load', function() {
-			helpers.addEvent(iframe.contentWindow || iframe, 'resize', notify);
+		if (!erd) {
+			erd = elementResizeDetectorMaker({
+				strategy: 'scroll',
+			});
+		}
 
-			// The iframe size might have changed while loading, which can also
-			// happen if the size has been changed while detached from the DOM.
-			notify();
-		});
-
-		node.insertBefore(iframe, node.firstChild);
+		erd.listenTo(node, notify);
+		stub.resizer = true;
 	};
 	helpers.removeResizeListener = function(node) {
 		if (!node || !node._chartjs) {
 			return;
 		}
 
-		var iframe = node._chartjs.resizer;
-		if (iframe) {
-			iframe.parentNode.removeChild(iframe);
-			node._chartjs.resizer = null;
-		}
+		erd.removeAllListeners(node);
 
+		delete node._chartjs.resizer;
 		delete node._chartjs;
 	};
 	helpers.isArray = Array.isArray?
