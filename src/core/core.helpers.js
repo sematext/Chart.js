@@ -977,7 +977,7 @@ module.exports = function(Chart) {
 			return;
 		}
 
-		erd.removeAllListeners(node);
+		erd.uninstall(node);
 
 		delete node._chartjs.resizer;
 		delete node._chartjs;
