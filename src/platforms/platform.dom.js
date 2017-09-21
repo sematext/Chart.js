@@ -209,9 +209,13 @@ function createResizer(handler) {
 
 // https://davidwalsh.name/detect-node-insertion
 function watchForRender(node, handler) {
+	if (node._inserted) {
+		setTimeout(handler, 0);
+	}
 	var expando = node[EXPANDO_KEY] || (node[EXPANDO_KEY] = {});
 	var proxy = expando.renderProxy = function(e) {
 		if (e.animationName === CSS_RENDER_ANIMATION) {
+			node._inserted = true;
 			handler();
 		}
 	};
@@ -228,6 +232,7 @@ function watchForRender(node, handler) {
 	expando.reflow = !!node.offsetParent;
 
 	node.classList.add(CSS_RENDER_MONITOR);
+
 }
 
 function unwatchForRender(node) {
