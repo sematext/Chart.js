@@ -852,7 +852,7 @@ module.exports = function(Chart) {
 			// If tooltip didn't change or pointer did not move vertically, do not handle the target event
 			if (!changed) {
 				// If tooltip didn't change, check the pointer's Y coordinate
-				if (me._lastOffsetY === yOffset) {
+				if (me._lastOffsetY === yOffset || e.type === 'mouseout') {
 					return false;
 				}
 			}
