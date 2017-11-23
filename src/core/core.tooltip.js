@@ -831,12 +831,16 @@ module.exports = function(Chart) {
 			var options = me._options;
 			var changed = false;
 
-			// Sematext dirty fix:
-			// we have to track pointer's Y coordinate, due to the fact that our yellow tooltip highlight
+			// Sematext fixes:
+			// track pointer's X position, because the event is not fired
+			// if the underlying value stays the same
+			var xOffset = e.offsetX || e.x;
+			// track pointer's Y coordinate, due to the fact that our yellow tooltip highlight
 			// changes even though tooltip data has not changed, so the event is unhandled
 			var yOffset = e.offsetY || e.y;
 
 			me._lastActive = me._lastActive || [];
+			me._lastOffsetX = me._lastOffsetX || xOffset;
 			me._lastOffsetY = me._lastOffsetY || yOffset;
 
 			// Find Active Elements for tooltips
@@ -848,16 +852,18 @@ module.exports = function(Chart) {
 
 			// Remember Last Actives
 			changed = !helpers.arrayEquals(me._active, me._lastActive);
+			var pointerPositionChanged = me._lastOffsetY !== yOffset || me._lastOffsetX !== xOffset;
 
-			// If tooltip didn't change or pointer did not move vertically, do not handle the target event
+			// If tooltip didn't change or pointer did not move, do not handle the target event
 			if (!changed) {
 				// If tooltip didn't change, check the pointer's Y coordinate
-				if (me._lastOffsetY === yOffset || e.type !== 'mousemove') {
+				if (e.type !== 'mousemove' || !pointerPositionChanged) {
 					return false;
 				}
 			}
 
 			me._lastActive = me._active;
+			me._lastOffsetX = xOffset;
 			me._lastOffsetY = yOffset;
 
 			if (options.enabled || options.custom) {
